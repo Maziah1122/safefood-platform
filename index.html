@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ms" class="text-base h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAFEFOOD Enterprise | National Food Safety Platform</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: { 50: '#f0fdf4', 100: '#dcfce7', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b', 950: '#022c22' },
+                        amber: { 50: '#fffbeb', 100: '#fef3c7', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' },
+                        gold: { 300: '#fde047', 400: '#facc15', 500: '#eab308', 600: '#ca8a04' },
+                        cream: '#FAF8F5'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome & Chart.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="bg-cream text-slate-800 font-sans h-screen flex flex-col overflow-hidden antialiased selection:bg-emerald-600 selection:text-white">
+
+    <!-- FLOATING TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col space-y-3 max-w-md w-full pointer-events-none px-4"></div>
+
+    <!-- GLOBAL DYNAMIC MODAL -->
+    <div id="appModal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden border border-slate-200">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
+                <h3 id="modalTitle" class="font-black text-sm flex items-center gap-2 text-emerald-400"></h3>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <div id="modalBody" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs"></div>
+            <div id="modalFooter" class="p-4 bg-slate-50 border-t border-slate-100 text-right">
+                <button onclick="closeModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition" data-i18n="close">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTHENTICATION (LOGIN & REGISTER) STRICT MODAL -->
+    <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
+            <!-- Modal Header -->
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-800 text-emerald-300 flex items-center justify-center text-sm font-black">
+                        <i class="fa-solid fa-user-lock"></i>
+                    </div>
+                    <div>
+                        <h3 id="authModalTitle" class="font-black text-sm text-white">Log Masuk Pengguna</h3>
+                        <p class="text-[10px] text-emerald-400 font-mono">SAFEFOOD BIOMETRIC & RBAC</p>
+                    </div>
+                </div>
+                <button onclick="closeAuthModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content (Forms) -->
+            <div class="p-6 space-y-4 text-xs font-bold">
+                <!-- Tab Selector: Login vs Register -->
+                <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                    <button onclick="setAuthTab('login')" id="btnAuthTabLogin" class="py-2 rounded-xl bg-slate-900 text-white font-black transition">Log Masuk</button>
+                    <button onclick="setAuthTab('register')" id="btnAuthTabRegister" class="py-2 rounded-xl text-slate-600 hover:text-slate-900 font-bold transition">Daftar Akaun</button>
+                </div>
+
+                <!-- LOGIN FORM -->
+                <form id="formAuthLogin" onsubmit="handleAuthLogin(event)" class="space-y-3.5">
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1">Emel Rasmi / Pengguna</label>
+                        <input type="email" id="loginEmail" required placeholder="pegawai@safefood.gov.my" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1">Kata Laluan</label>
+                        <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black shadow flex items-center justify-center space-x-2 transition">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            <span>Sahkan Log Masuk</span>
+                        </button>
+                    </div>
+                    <!-- Quick Demo Credentials Hint -->
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] text-slate-500 space-y-0.5">
+                        <p class="font-bold text-slate-700">Akaun Contoh Sedia Ada:</p>
+                        <p>• Pegawai Makmal: <code class="text-emerald-700">pegawai@safefood.gov.my</code> | <code class="text-slate-700">pass123</code></p>
+                        <p>• Pentadbir: <code class="text-emerald-700">admin@safefood.gov.my</code> | <code class="text-slate-700">admin123</code></p>
+                    </div>
+                </form>
+
+                <!-- REGISTER FORM -->
+                <form id="formAuthRegister" onsubmit="handleAuthRegister(event)" class="space-y-3 hidden">
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1">Nama Penuh</label>
+                        <input type="text" id="regName" required placeholder="Cth: Dr. Siti Nurhaliza" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1">Emel Pengguna</label>
+                        <input type="email" id="regEmail" required placeholder="nama@organisasi.gov.my" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1">Peranan Akses (Role)</label>
+                        <select id="regRole" class="w-full p-2.5 border border-slate-200 rounded-xl bg-white">
+                            <option value="TESTER">Pegawai Makmal (Tester - Full Input/Edit)</option>
+                            <option value="ADMIN">Pentadbir Sistem (Executive Admin)</option>
+                            <option value="PUBLIC">Orang Awam / Pelawat (Read-Only)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1">Jabatan / Bahagian</label>
+                        <input type="text" id="regDept" required placeholder="Cth: Unit MRL Biosekuriti Tani" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1">Cipta Kata Laluan</label>
+                        <input type="password" id="regPassword" required placeholder="Min 6 aksara" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                    </div>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black shadow flex items-center justify-center space-x-2 transition">
+                            <i class="fa-solid fa-user-plus"></i>
+                            <span>Daftar Akaun Baharu</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARIAN TERPERINCI MODAL -->
+    <div id="searchModal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
+                <h3 class="font-black text-sm text-emerald-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> <span data-i18n="detailed_search_title">Carian Terperinci Hasil Tani</span>
+                </h3>
+                <button onclick="closeSearchModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 text-xs font-bold">
+                <div>
+                    <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_name">Nama Hasil Tani</label>
+                    <input type="text" id="advSearchName" placeholder="Cth: Sawi, Tomato, Jambu..." class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_cat">Kategori Sampel</label>
+                    <select id="advSearchCat" class="w-full p-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="ALL" data-i18n="opt_all_cat">Semua Kategori</option>
+                        <option value="Sayur-sayuran" data-i18n="cat_veg">Sayur-sayuran</option>
+                        <option value="Buah-buahan" data-i18n="cat_fruit">Buah-buahan</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-700 uppercase mb-1" data-i18n="th_status">Status Keselamatan</label>
+                    <select id="advSearchStatus" class="w-full p-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="ALL" data-i18n="opt_all">Semua Status</option>
+                        <option value="SELAMAT" data-i18n="opt_safe">🟢 Selamat (≤40%)</option>
+                        <option value="AMARAN" data-i18n="opt_warn">🟡 Amaran (41-49%)</option>
+                        <option value="BAHAYA" data-i18n="opt_danger">🔴 Bahaya (≥50%)</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_min_rate">Perencatan Min (%)</label>
+                        <input type="number" id="advMinRate" placeholder="0" class="w-full p-3 border border-slate-200 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_max_rate">Perencatan Max (%)</label>
+                        <input type="number" id="advMaxRate" placeholder="100" class="w-full p-3 border border-slate-200 rounded-xl">
+                    </div>
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button onclick="resetAdvancedSearch()" class="px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-100" data-i18n="btn_reset">Reset</button>
+                    <button onclick="executeAdvancedSearch()" class="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black shadow" data-i18n="btn_search_now">Cari Sekarang</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="flex flex-1 h-full min-h-0 relative">
+
+        <!-- IMMERSIVE FIXED SIDEBAR -->
+        <aside id="mainSidebar" class="w-72 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800/80 shrink-0 h-full shadow-2xl z-30 transition-all duration-300">
+            
+            <!-- BRANDING -->
+            <div onclick="openCyberSecurityModal()" title="Diagnostik Keselamatan Siber" class="p-5 border-b border-slate-800/80 flex items-center space-x-3.5 bg-slate-900/60 hover:bg-slate-900 transition cursor-pointer group shrink-0">
+                <div class="relative flex items-center justify-center">
+                    <div class="absolute -inset-1 bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-500 rounded-2xl blur-sm opacity-70 group-hover:opacity-100 transition animate-pulse"></div>
+                    <div class="relative bg-slate-950 border border-emerald-400/80 text-emerald-400 p-3 rounded-2xl shadow-xl font-black text-xl flex items-center justify-center group-hover:scale-105 transition">
+                        <i class="fa-solid fa-shield-virus"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-1.5">
+                        <h1 class="font-black text-white text-base tracking-tight leading-none font-mono">SAFEFOOD</h1>
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    </div>
+                    <p class="text-[9px] text-emerald-400 font-bold uppercase tracking-widest mt-1 font-mono">CYBER SECURITY MRL</p>
+                    <span class="text-[9px] text-slate-500 font-mono group-hover:text-emerald-300 transition flex items-center gap-1 mt-0.5">
+                        <i class="fa-solid fa-microchip"></i> <span data-i18n="lbl_diagnostics">Klik Diagnostik</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="p-4 space-y-1.5 flex-1 overflow-y-auto">
+                <div class="text-[10px] font-black uppercase text-slate-500 tracking-wider px-3 mb-2" data-i18n="nav_title">Sistem Pemantauan</div>
+                
+                <div onclick="switchTab('dashboard')" id="nav-dashboard" class="sidebar-item active">
+                    <i class="fa-solid fa-chart-line text-base w-5"></i>
+                    <span data-i18n="nav_cmd">Pusat Kawalan Utama</span>
+                </div>
+
+                <div onclick="switchTab('pesticide')" id="nav-pesticide" class="sidebar-item">
+                    <i class="fa-solid fa-vial-circle-check text-base w-5"></i>
+                    <span data-i18n="nav_prm">Ujian PRM-1D Makmal</span>
+                </div>
+
+                <div onclick="switchTab('mrl-db')" id="nav-mrl-db" class="sidebar-item">
+                    <i class="fa-solid fa-database text-base w-5"></i>
+                    <span data-i18n="nav_mrl">Pangkalan Data Ujian</span>
+                </div>
+
+                <div onclick="switchTab('logistics')" id="nav-logistics" class="sidebar-item">
+                    <i class="fa-solid fa-truck-field text-base w-5"></i>
+                    <span data-i18n="nav_logistics">Logistik & Pemborong</span>
+                </div>
+
+                <div onclick="switchTab('genius-ai')" id="nav-genius-ai" class="sidebar-item">
+                    <i class="fa-solid fa-brain text-base w-5 text-gold-400"></i>
+                    <span data-i18n="nav_ai_gis">Genius AI & Peta GIS</span>
+                </div>
+
+                <div onclick="switchTab('guide')" id="nav-guide" class="sidebar-item">
+                    <i class="fa-solid fa-book-bookmark text-base w-5 text-emerald-400"></i>
+                    <span data-i18n="nav_guide">Panduan Penggunaan</span>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800 text-[10px] font-black uppercase text-slate-500 tracking-wider px-3 mb-2" data-i18n="sys_title">Akaun Pengguna</div>
+
+                <div onclick="openProfileModal()" class="sidebar-item">
+                    <i class="fa-solid fa-gear text-base w-5"></i>
+                    <span data-i18n="nav_profile">Tetapan</span>
+                </div>
+            </div>
+
+            <!-- Sidebar User Designation Footer -->
+            <div class="p-4 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div id="sbUserAvatar" class="w-9 h-9 rounded-2xl bg-emerald-800 text-white font-mono font-black text-xs flex items-center justify-center border border-emerald-600 shadow">
+                        PG
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p id="sbUserName" class="text-xs font-bold text-white leading-tight truncate">Pegawai Keselamatan Makanan</p>
+                        <p id="sbUserRole" class="text-[10px] text-emerald-400 font-bold" data-i18n="role_officer">Akses Pegawai Makmal (Penuh)</p>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="text-slate-500 hover:text-rose-400 transition text-sm p-1.5 rounded-lg hover:bg-slate-800 shrink-0" title="Keluar Mod Akses">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- RIGHT MAIN CONTENT AREA -->
+        <div class="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-cream">
+            
+            <!-- TOP CONTROL BAR -->
+            <header class="bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-3.5 flex justify-between items-center shadow-sm shrink-0 z-20">
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleSidebar()" class="text-slate-600 hover:text-slate-900 text-lg p-1.5 rounded-xl hover:bg-slate-100 transition">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="bg-emerald-100 text-emerald-900 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider" data-i18n="badge_platform">Platform Keselamatan Makanan</span>
+                            <span class="bg-amber-100 text-amber-900 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-amber-300" data-i18n="badge_real_data">Data Ujian Makmal Disahkan</span>
+                        </div>
+                        <h2 id="headerPageTitle" class="text-base font-black text-slate-900 leading-tight mt-0.5" data-i18n="nav_cmd">Pusat Kawalan Utama</h2>
+                    </div>
+                </div>
+
+                <!-- Right Top Tools -->
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                        <button onclick="setLanguage('MY')" id="langBtnMY" class="px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-black shadow transition">BM</button>
+                        <button onclick="setLanguage('EN')" id="langBtnEN" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition">EN</button>
+                    </div>
+
+                    <div id="authBtnContainer">
+                        <button onclick="openAuthModal('login')" class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition text-xs flex items-center space-x-1.5 shadow">
+                            <i class="fa-solid fa-user-lock text-emerald-400"></i>
+                            <span data-i18n="login_btn">Log Masuk / Daftar</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- SCROLLABLE MAIN CONTENT CONTAINER -->
+            <main id="mainScrollContent" class="flex-1 overflow-y-auto p-6 pb-24 space-y-6">
+
+                <!-- ==================== VIEW 1: EXECUTIVE COMMAND CENTER ==================== -->
+                <div id="view-dashboard" class="view-panel space-y-6">
+                    
+                    <!-- KPI Metric Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="glass-card p-5 rounded-3xl border-l-4 border-l-blue-500">
+                            <p class="text-[10px] font-black uppercase text-slate-400 tracking-wider" data-i18n="kpi_total">JUMLAH SAMPEL MAKMAL</p>
+                            <h3 class="text-3xl font-black text-slate-900 mt-1 font-mono" id="kpiTotal">68</h3>
+                            <p class="text-xs text-slate-500 mt-1" data-i18n="kpi_sub_total">Data Hasil Ujian Makmal Real</p>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-3xl border-l-4 border-l-emerald-500">
+                            <p class="text-[10px] font-black uppercase text-emerald-700 tracking-wider" data-i18n="kpi_safe">MEMUASKAN / SELAMAT (≤40%)</p>
+                            <h3 class="text-3xl font-black text-emerald-600 mt-1 font-mono" id="kpiSafe">43</h3>
+                            <p class="text-xs text-emerald-700 mt-1"><span id="kpiSafePct">63.2</span>% <span data-i18n="kpi_sub_safe">Tahap Keselamatan Memuaskan</span></p>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-3xl border-l-4 border-l-amber-500">
+                            <p class="text-[10px] font-black uppercase text-amber-700 tracking-wider" data-i18n="kpi_warn">AMARAN / WASPADA (41-49%)</p>
+                            <h3 class="text-3xl font-black text-amber-600 mt-1 font-mono" id="kpiWarn">9</h3>
+                            <p class="text-xs text-amber-700 mt-1"><span id="kpiWarnPct">13.2</span>% <span data-i18n="kpi_sub_warn">Risiko Sederhana</span></p>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-3xl border-l-4 border-l-rose-500">
+                            <p class="text-[10px] font-black uppercase text-rose-700 tracking-wider" data-i18n="kpi_danger">MELEBIHI HAD MRL (≥50%)</p>
+                            <h3 class="text-3xl font-black text-rose-600 mt-1 font-mono" id="kpiDanger">16</h3>
+                            <p class="text-xs text-rose-700 mt-1"><span id="kpiDangerPct">23.5</span>% <span data-i18n="kpi_sub_danger">Tindakan Penguatkuasaan</span></p>
+                        </div>
+                    </div>
+
+                    <!-- ADVANCED MULTI-CHART SUITE -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Chart 1: Doughnut Safety Ratio -->
+                        <div class="glass-card p-6 rounded-3xl flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <h4 class="font-black text-slate-800 text-xs uppercase tracking-wider" data-i18n="chart_pie_title">Nisbah Klasifikasi Keselamatan</h4>
+                                    <span class="text-[10px] font-mono font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">MRL Codex</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mb-3" data-i18n="chart_pie_sub">Pecahan sampel ujian mengikut kategori ambang racun.</p>
+                            </div>
+                            <div class="relative h-60 w-full flex items-center justify-center">
+                                <canvas id="chartDoughnut"></canvas>
+                            </div>
+                            <div class="grid grid-cols-3 gap-1 pt-3 mt-2 border-t border-slate-100 text-center text-[10px] font-bold">
+                                <div class="p-1.5 rounded-xl bg-emerald-50 text-emerald-800" data-i18n="lbl_safe_badge">🟢 Selamat</div>
+                                <div class="p-1.5 rounded-xl bg-amber-50 text-amber-800" data-i18n="lbl_warn_badge">🟡 Amaran</div>
+                                <div class="p-1.5 rounded-xl bg-rose-50 text-rose-800" data-i18n="lbl_danger_badge">🔴 Bahaya</div>
+                            </div>
+                        </div>
+
+                        <!-- Chart 2: Interactive Dynamic Bar Chart -->
+                        <div class="glass-card p-6 rounded-3xl lg:col-span-2 flex flex-col justify-between">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                                <div>
+                                    <h4 class="font-black text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="fa-solid fa-chart-simple text-emerald-700"></i>
+                                        <span data-i18n="chart_bar_title">Taburan Perencatan Enzim Sampel Pasaran (%)</span>
+                                    </h4>
+                                    <p class="text-[11px] text-slate-500 mt-0.5" data-i18n="chart_bar_sub">Warna bar dinamik: 🟢 Selamat (≤40%), 🟡 Amaran (41-49%), 🔴 Bahaya (≥50%).</p>
+                                </div>
+
+                                <div class="flex items-center space-x-1 p-1 bg-slate-100 rounded-xl border border-slate-200 text-[11px] font-bold">
+                                    <button onclick="setBarChartFilter('BALANCED')" id="btnBarBalanced" class="px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-bold transition shadow" data-i18n="btn_bar_all">Pelbagai Status</button>
+                                    <button onclick="setBarChartFilter('Sayur-sayuran')" id="btnBarVeg" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition" data-i18n="cat_veg">Sayur-sayuran</button>
+                                    <button onclick="setBarChartFilter('Buah-buahan')" id="btnBarFruit" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition" data-i18n="cat_fruit">Buah-buahan</button>
+                                    <button onclick="setBarChartFilter('DANGER')" id="btnBarDanger" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition" data-i18n="btn_bar_danger">Risiko Tinggi</button>
+                                </div>
+                            </div>
+
+                            <div class="relative h-64 w-full">
+                                <canvas id="chartBar"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Analytics: Zone Risk Profile & Dynamic Kinetic Degradation -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Chart 3: Geographic Supply Zone Toxicity Profile -->
+                        <div class="glass-card p-6 rounded-3xl space-y-3">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                                <div>
+                                    <h4 class="font-black text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="fa-solid fa-map-location-dot text-blue-600"></i>
+                                        <span data-i18n="chart_zone_title">Purata Indeks Sisa Racun Mengikut Zon Asal Bekalan (%)</span>
+                                    </h4>
+                                    <p class="text-[11px] text-slate-500 mt-0.5" data-i18n="chart_zone_sub">Pemetaan purata kadar perencatan sampel mengikut hab pertanian utama.</p>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-800 font-mono text-[10px] font-bold border border-blue-200">GIS Telemetry</span>
+                            </div>
+                            <div class="relative h-60 w-full">
+                                <canvas id="chartZone"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 4: Upgraded AI Kinetic Degradation & PHI Decay Curves -->
+                        <div class="glass-card p-6 rounded-3xl space-y-3">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-2">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-black text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                            <i class="fa-solid fa-wave-square text-teal-600"></i>
+                                            <span data-i18n="chart_kinetic_title">Lengkok Kinetik Degradasi Racun Sepanjang 14 Hari</span>
+                                        </h4>
+                                        <button onclick="openKineticInfoModal()" title="Penjelasan Kinetik Degradasi" class="w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-600 flex items-center justify-center text-[10px] font-black transition cursor-pointer border border-slate-300">
+                                            <i class="fa-solid fa-info"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 mt-0.5" data-i18n="chart_kinetic_sub">Simulasi penguraian kimia racun aktif mengikut masa (First-Order Kinetics).</p>
+                                </div>
+
+                                <div class="flex items-center space-x-1.5 self-end sm:self-auto">
+                                    <select id="kineticSampleSelect" onchange="handleKineticSampleChange(this.value)" class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                        <option value="COHORT_AVG" data-i18n="opt_cohort_avg">📊 Purata Kohort (Bahaya/Amaran/Selamat)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="relative h-60 w-full">
+                                <canvas id="chartKinetic"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PUBLIC CATALOG -->
+                    <div class="glass-card p-6 rounded-3xl space-y-4">
+                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                            <div>
+                                <h3 class="font-black text-slate-900 text-base" data-i18n="catalog_title">Hasil Tani Ujian Makmal Real</h3>
+                                <p class="text-xs text-slate-500" data-i18n="catalog_sub">Tekan sampel untuk laporan analisis saintifik dan panduan penggunaan.</p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                                <div class="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
+                                    <button onclick="setViewMode('grid')" id="btnViewGrid" class="px-3 py-1.5 rounded-lg bg-emerald-700 text-white font-bold text-xs shadow"><i class="fa-solid fa-grip"></i> Grid</button>
+                                    <button onclick="setViewMode('table')" id="btnViewTable" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 font-bold text-xs"><i class="fa-solid fa-list"></i> Jadual</button>
+                                </div>
+
+                                <select id="sortSelect" onchange="setSortBy(this.value)" class="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold bg-white">
+                                    <option value="rate-desc" data-i18n="opt_sort_high">Kadar: Tinggi ➔ Rendah</option>
+                                    <option value="rate-asc" data-i18n="opt_sort_low">Kadar: Rendah ➔ Tinggi</option>
+                                    <option value="name" data-i18n="opt_sort_alpha">Susun Mengikut Abjad</option>
+                                </select>
+
+                                <input type="text" id="publicSearch" onkeyup="renderPublicCards()" placeholder="Cari..." class="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 w-32">
+
+                                <button onclick="openSearchModal()" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow">
+                                    <i class="fa-solid fa-sliders text-gold-400"></i>
+                                    <span data-i18n="btn_adv_search">Carian Terperinci</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="publicCardsContainer" class="max-h-[520px] overflow-y-auto pr-1">
+                            <div id="publicCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-slate-100 text-xs font-bold text-slate-600">
+                            <div class="flex items-center space-x-2">
+                                <span data-i18n="lbl_display">Paparkan:</span>
+                                <select onchange="setPageSize(this.value)" class="px-2 py-1 border border-slate-200 rounded-lg bg-white">
+                                    <option value="8" selected>8 Sampel</option>
+                                    <option value="12">12 Sampel</option>
+                                    <option value="24">24 Sampel</option>
+                                    <option value="50">50 Sampel</option>
+                                    <option value="ALL" data-i18n="opt_unlimited">Semua Sampel (ALL / Unlimited)</option>
+                                </select>
+                            </div>
+
+                            <span id="pageInfoText" class="text-slate-500 font-mono">Halaman 1 daripada 1</span>
+
+                            <div class="flex items-center space-x-2">
+                                <button id="btnPrevPage" onclick="changePage(-1)" class="px-3.5 py-1.5 border border-slate-200 rounded-xl hover:bg-slate-100 disabled:opacity-40 transition flex items-center space-x-1">
+                                    <i class="fa-solid fa-chevron-left"></i> <span data-i18n="btn_prev">Sebelum</span>
+                                </button>
+                                <button id="btnNextPage" onclick="changePage(1)" class="px-3.5 py-1.5 border border-slate-200 rounded-xl hover:bg-slate-100 disabled:opacity-40 transition flex items-center space-x-1">
+                                    <span data-i18n="btn_next">Selepas</span> <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ==================== VIEW 2: TESTER LAB INPUT ==================== -->
+                <div id="view-pesticide" class="view-panel hidden space-y-6">
+                    <div class="max-w-3xl mx-auto glass-card p-8 rounded-3xl space-y-5">
+                        <div class="border-b border-slate-200 pb-3">
+                            <span class="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-900 px-3 py-1 rounded-md" data-i18n="prm_badge">UJIAN KETOKSIKAN PRM-1D</span>
+                            <h2 class="text-xl font-black text-slate-900 mt-2 flex items-center gap-2">
+                                <i class="fa-solid fa-flask-vial text-emerald-700"></i>
+                                <span data-i18n="prm_title">Input Bacaan Ujian PRM-1D Makmal</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-1" data-i18n="prm_sub">Pengukuran perencatan enzim Cholinesterase (AChE) bagi sebatian racun organofosfat & karbamat.</p>
+                        </div>
+
+                        <!-- PUBLIC ACCESS RESTRICTION BANNER -->
+                        <div id="prmAccessBanner" class="hidden p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 font-bold text-xs flex items-center space-x-3">
+                            <i class="fa-solid fa-lock text-amber-600 text-base"></i>
+                            <div>
+                                <strong class="block" data-i18n="lbl_restricted_title">Mod Pelawat Awam (Bacaan Sahaja)</strong>
+                                <span class="font-normal" data-i18n="lbl_restricted_sub">Hanya Pegawai Makmal & Pentadbir dibenarkan menyimpan rekod ujian PRM-1D baharu. Sila log masuk/tukar mod di Tetapan Akaun.</span>
+                            </div>
+                        </div>
+
+                        <form id="formPesticideTest" onsubmit="handlePesticideTestSubmit(event)" class="space-y-4 text-xs font-bold">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_name">NAMA HASIL TANI <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="inpProdName" required placeholder="Cth: Sawi Taiwan, Tomato Cherry, Jambu" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_cat">KATEGORI HASIL <span class="text-rose-500">*</span></label>
+                                    <select id="inpProdType" required class="w-full p-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                        <option value="Sayur-sayuran" data-i18n="cat_veg">Sayur-sayuran</option>
+                                        <option value="Buah-buahan" data-i18n="cat_fruit">Buah-buahan</option>
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="block text-slate-700 uppercase" data-i18n="lbl_rate">KADAR PERENCATAN ENZIM / INHIBITION RATE (%) <span class="text-rose-500">*</span></label>
+                                        <span class="text-[11px] text-slate-400 font-mono" data-i18n="lbl_std_limit">Had Piawai: 50%</span>
+                                    </div>
+                                    <input type="number" id="inpInhibitionRate" step="0.1" min="0" max="100" required placeholder="0.0 - 100.0" oninput="liveFormPreview()" class="w-full p-3 border border-slate-200 rounded-xl text-sm font-black font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_origin"><i class="fa-solid fa-location-dot text-slate-400"></i> LOKASI PERSAMPELAN / LADANG</label>
+                                    <input type="text" id="inpProdOrigin" value="TKPM Kiamsam (Labuan)" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_notes">CATATAN TAMBAHAN ANALISIS</label>
+                                    <input type="text" id="inpProdNotes" placeholder="Cth: Lot 4, Ujian ulangan 2 jam lepas petik" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div id="evalPreviewBox" class="p-4 rounded-2xl bg-slate-50 border border-slate-200 transition">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1" data-i18n="lbl_auto_eval">PENILAIAN AUTOMATIK STATUS MRL</span>
+                                <div id="evalPreviewText" class="text-xs font-bold text-slate-600" data-i18n="lbl_eval_placeholder">Masukkan nilai % di atas untuk simulasi penilaian automatik (Hijau ≤40%, Kuning 41-49%, Merah ≥50%).</div>
+                            </div>
+
+                            <div class="pt-2 flex justify-end space-x-3">
+                                <button type="button" onclick="resetPesticideForm()" class="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-100 font-bold flex items-center gap-1.5" data-i18n="btn_reset">
+                                    <i class="fa-solid fa-rotate-left"></i> Reset
+                                </button>
+                                <button type="submit" id="btnSubmitPesticide" class="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black shadow flex items-center space-x-2">
+                                    <i class="fa-solid fa-floppy-disk"></i>
+                                    <span data-i18n="btn_save_record">Simpan Ke Rekod Ujian</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ==================== VIEW 3: MRL DATABASE (WITH EDIT & DELETE MODAL) ==================== -->
+                <div id="view-mrl-db" class="view-panel hidden space-y-4">
+                    <div class="glass-card p-6 rounded-3xl space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h2 class="text-lg font-black text-slate-900" data-i18n="mrl_title">Pangkalan Data Pemantauan MRL</h2>
+                                <p class="text-xs text-slate-500" data-i18n="mrl_sub">Rekod pemantauan sampel racun perosak mengikut standard keselamatan.</p>
+                            </div>
+                            <button onclick="exportToCSV()" class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition flex items-center space-x-2 shadow">
+                                <i class="fa-solid fa-file-csv text-gold-400"></i>
+                                <span data-i18n="btn_export">Eksport Fail CSV</span>
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs font-bold">
+                            <div class="flex items-center space-x-2 w-full sm:w-auto">
+                                <input type="text" id="dbSearch" onkeyup="filterMRLTable()" placeholder="Cari nama sampel..." class="px-3.5 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none w-60">
+                                <select id="dbFilterStatus" onchange="filterMRLTable()" class="px-3 py-2 border border-slate-200 rounded-xl bg-white">
+                                    <option value="ALL" data-i18n="opt_all">Semua Status</option>
+                                    <option value="SELAMAT" data-i18n="opt_safe">Selamat (≤40%)</option>
+                                    <option value="AMARAN" data-i18n="opt_warn">Amaran (41-49%)</option>
+                                    <option value="BAHAYA" data-i18n="opt_danger">Melebihi MRL (≥50%)</option>
+                                </select>
+                            </div>
+                            <span class="text-slate-500"><span data-i18n="lbl_total_rec">Jumlah:</span> <strong id="dbRecordCount" class="text-emerald-800 font-mono">0</strong></span>
+                        </div>
+
+                        <div class="max-h-[460px] overflow-y-auto rounded-2xl border border-slate-200 bg-white">
+                            <table class="w-full text-left text-xs font-bold border-collapse">
+                                <thead class="bg-slate-900 text-white uppercase tracking-wider sticky top-0 z-10 shadow">
+                                    <tr>
+                                        <th class="p-3.5">ID</th>
+                                        <th class="p-3.5" data-i18n="th_name">Nama Hasil Tani</th>
+                                        <th class="p-3.5" data-i18n="th_cat">Kategori</th>
+                                        <th class="p-3.5" data-i18n="th_rate">Inhibition Rate (%)</th>
+                                        <th class="p-3.5" data-i18n="th_status">Status MRL</th>
+                                        <th class="p-3.5" data-i18n="th_tester">Diuji Oleh</th>
+                                        <th class="p-3.5 text-center" data-i18n="th_action">Tindakan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mrlTableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== VIEW 4: LOGISTICS & PEMBORONG ==================== -->
+                <div id="view-logistics" class="view-panel hidden space-y-6">
+                    <div class="glass-card p-6 rounded-3xl space-y-6">
+                        
+                        <!-- Header & Add Button -->
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+                            <div>
+                                <h2 class="text-lg font-black text-slate-900 flex items-center gap-2.5">
+                                    <i class="fa-solid fa-truck text-emerald-700"></i>
+                                    <span data-i18n="nav_logistics">Pengurusan Rantaian Bekalan & Pemborong</span>
+                                </h2>
+                                <p class="text-xs text-slate-500 mt-0.5" data-i18n="logistics_sub">Pendaftaran dan pemantauan pergerakan kargo pemborong hasil pertanian masuk ke WP Labuan.</p>
+                            </div>
+                            <div id="lorryAddBtnContainer">
+                                <button onclick="openAddLorryModal()" class="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition flex items-center space-x-2 shadow shrink-0">
+                                    <i class="fa-solid fa-plus"></i>
+                                    <span data-i18n="btn_add_lorry">Daftar Lori Pemborong Baru</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Mini KPIs / Quick Counters -->
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            <div onclick="filterLorryByStatus('ALL')" class="p-3.5 bg-slate-900 text-white rounded-2xl cursor-pointer hover:bg-slate-800 transition shadow">
+                                <span class="text-[9px] uppercase font-mono text-slate-400 block tracking-wider" data-i18n="kpi_lorry_total">JUMLAH LORI</span>
+                                <strong id="kpiLorryTotal" class="text-2xl font-black font-mono">0</strong>
+                            </div>
+                            <div onclick="filterLorryByStatus('Lulus')" class="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-950 rounded-2xl cursor-pointer hover:bg-emerald-100 transition">
+                                <span class="text-[9px] uppercase font-mono text-emerald-700 block tracking-wider font-bold" data-i18n="stat_passed">LULUS</span>
+                                <strong id="kpiLorryLulus" class="text-2xl font-black font-mono text-emerald-700">0</strong>
+                            </div>
+                            <div onclick="filterLorryByStatus('Dalam Transit')" class="p-3.5 bg-blue-50 border border-blue-200 text-blue-950 rounded-2xl cursor-pointer hover:bg-blue-100 transition">
+                                <span class="text-[9px] uppercase font-mono text-blue-700 block tracking-wider font-bold" data-i18n="stat_transit">DALAM TRANSIT</span>
+                                <strong id="kpiLorryTransit" class="text-2xl font-black font-mono text-blue-700">0</strong>
+                            </div>
+                            <div onclick="filterLorryByStatus('Disemak')" class="p-3.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-2xl cursor-pointer hover:bg-slate-200 transition">
+                                <span class="text-[9px] uppercase font-mono text-slate-500 block tracking-wider font-bold" data-i18n="stat_review">DISEMAK</span>
+                                <strong id="kpiLorryDisemak" class="text-2xl font-black font-mono text-slate-700">0</strong>
+                            </div>
+                            <div onclick="filterLorryByStatus('Kuarantin')" class="p-3.5 bg-rose-50 border border-rose-200 text-rose-950 rounded-2xl cursor-pointer hover:bg-rose-100 transition">
+                                <span class="text-[9px] uppercase font-mono text-rose-700 block tracking-wider font-bold" data-i18n="stat_quarantine">KUARANTIN</span>
+                                <strong id="kpiLorryKuarantin" class="text-2xl font-black font-mono text-rose-700">0</strong>
+                            </div>
+                        </div>
+
+                        <!-- Live Search, Filter Tabs & Layout Switcher -->
+                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pt-2">
+                            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                                <div class="relative flex-1 sm:w-64">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                                    <input type="text" id="lorrySearchInput" onkeyup="handleLorrySearch(this.value)" placeholder="Cari Plat, Syarikat, Laluan..." class="w-full pl-9 pr-3.5 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                </div>
+                                <div class="flex items-center space-x-1 overflow-x-auto pb-1 sm:pb-0">
+                                    <button onclick="filterLorryByStatus('ALL')" id="tabLorryALL" class="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold transition" data-i18n="opt_all">Semua</button>
+                                    <button onclick="filterLorryByStatus('Lulus')" id="tabLorryLulus" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold transition" data-i18n="stat_passed">Lulus</button>
+                                    <button onclick="filterLorryByStatus('Dalam Transit')" id="tabLorryTransit" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold transition" data-i18n="stat_transit">Transit</button>
+                                    <button onclick="filterLorryByStatus('Disemak')" id="tabLorryDisemak" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold transition" data-i18n="stat_review">Disemak</button>
+                                    <button onclick="filterLorryByStatus('Kuarantin')" id="tabLorryKuarantin" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold transition" data-i18n="stat_quarantine">Kuarantin</button>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 self-end lg:self-auto">
+                                <button onclick="setLorryViewMode('grid')" id="btnLorryGrid" class="px-3 py-1.5 rounded-lg bg-emerald-700 text-white font-bold text-xs shadow"><i class="fa-solid fa-grip"></i> Kad Grid</button>
+                                <button onclick="setLorryViewMode('table')" id="btnLorryTable" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 font-bold text-xs"><i class="fa-solid fa-list"></i> Senarai Padat</button>
+                            </div>
+                        </div>
+
+                        <!-- LORRY CONTAINER -->
+                        <div id="lorryScrollContainer" class="max-h-[600px] overflow-y-auto pr-1">
+                            <div id="lorryCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== VIEW 5: GENIUS AI & SPATIAL GIS MAP ==================== -->
+                <div id="view-genius-ai" class="view-panel hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <div class="glass-card p-6 rounded-3xl lg:col-span-2 space-y-4">
+                            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-800 to-teal-600 text-gold-300 flex items-center justify-center text-lg font-black">
+                                        <i class="fa-solid fa-brain"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-black text-slate-900 text-base" data-i18n="ai_title">Penasihat AI Pintar Tuaian Selamat (Harvest AI)</h3>
+                                        <p class="text-xs text-slate-500" data-i18n="ai_sub">Pengiraan tempoh rehat selamat (Pre-Harvest Interval) berasaskan model kinetik & AI</p>
+                                    </div>
+                                </div>
+                                <span class="bg-emerald-100 text-emerald-900 font-mono text-[10px] font-black px-2.5 py-1 rounded-md">Gemini 3.8 Flash + Kinetics</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
+                                <div>
+                                    <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_select_ai_sample">PILIH SAMPEL UNTUK ANALISIS AI</label>
+                                    <select id="aiSampleSelect" onchange="runGeniusAIInference()" class="w-full p-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold">
+                                        <!-- JS Injected -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-slate-700 uppercase mb-1" data-i18n="lbl_soil_zone">ZON TELEMETRI TANIH (SOIL GIS)</label>
+                                    <select id="aiSoilZone" onchange="runGeniusAIInference()" class="w-full p-3 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold">
+                                        <option value="Zon A - TKPM Kiamsam (pH 6.5 - 78%)">Zon A - TKPM Kiamsam (pH 6.5 - 78%)</option>
+                                        <option value="Zon B - Kundasang Corridor (pH 5.8 - 84%)">Zon B - Kundasang Corridor (pH 5.8 - 84%)</option>
+                                        <option value="Zon C - Tenom Corridor (pH 6.2 - 72%)">Zon C - Tenom Corridor (pH 6.2 - 72%)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Metrics Boxes -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                                    <span class="text-[10px] text-slate-400 font-bold block" data-i18n="lbl_tested_rate">Kadar Diuji:</span>
+                                    <strong id="aiCardRate" class="text-emerald-700 text-base font-black font-mono">18.9%</strong>
+                                </div>
+                                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                                    <span class="text-[10px] text-slate-400 font-bold block">Chemical Half-life:</span>
+                                    <strong id="aiCardHalfLife" class="text-slate-800 text-base font-black font-mono">5.8 Hari</strong>
+                                </div>
+                                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                                    <span class="text-[10px] text-slate-400 font-bold block">Withholding Period:</span>
+                                    <strong id="aiCardWait" class="text-amber-700 text-base font-black font-mono">0 Hari Rehat</strong>
+                                </div>
+                                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                                    <span class="text-[10px] text-slate-400 font-bold block" data-i18n="lbl_risk_status">Status Risiko:</span>
+                                    <strong id="aiCardRisk" class="text-emerald-700 text-base font-black uppercase" data-i18n="stat_safe_label">MEMUASKAN</strong>
+                                </div>
+                            </div>
+
+                            <div id="aiOutputBox" class="p-5 rounded-2xl bg-slate-950 text-slate-100 space-y-3 font-mono text-xs shadow-inner border border-slate-800">
+                                <div class="flex justify-between items-center text-emerald-400 border-b border-slate-800/80 pb-2.5 font-sans font-black">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-microchip"></i> <span data-i18n="lbl_ai_report_title">LAPORAN INFERENCE GENIUS AI & KINETIK</span></span>
+                                    <span id="aiReportStatus" class="text-[10px] bg-emerald-950 text-emerald-400 px-2.5 py-0.5 rounded border border-emerald-800 font-bold" data-i18n="lbl_inference_done">INFERENCE SELESAI</span>
+                                </div>
+                                <div id="aiOutputContent" class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-sans text-xs leading-relaxed" data-i18n="lbl_ai_default_msg">
+                                    Sampel mematuhi had MRL. Sedia untuk dituai, diedarkan atau dimakan serta-merta.
+                                </div>
+                                <div class="flex justify-between text-[10px] text-slate-500 pt-1">
+                                    <span data-i18n="lbl_engine_info">Enjin: Local Kinetic Assay</span>
+                                    <span id="aiSoilFootnote">Status Tanih: Zon A - TKPM Kiamsam (pH 6.5)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- GIS Spatial Risk Map Simulation -->
+                        <div class="glass-card p-6 rounded-3xl space-y-4 text-xs font-bold">
+                            <h4 class="font-black text-slate-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-map-location-dot text-emerald-700"></i>
+                                <span data-i18n="gis_map_title">Peta Risiko Spatial & Tanih</span>
+                            </h4>
+                            <p class="text-slate-600 font-medium leading-relaxed" data-i18n="gis_map_sub">
+                                Pemetaan kawasan persampelan bagi mengesan hubungan antara kualiti tanih dan serapan sisa racun.
+                            </p>
+                            
+                            <div class="space-y-2">
+                                <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                    <strong class="text-emerald-900 block font-bold" data-i18n="zone_a_title">📍 Zon A (Kiamsam TKPM):</strong>
+                                    <span class="text-emerald-800" data-i18n="zone_a_sub">Indeks Risko Rendah (pH 6.5)</span>
+                                </div>
+                                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                    <strong class="text-amber-900 block font-bold" data-i18n="zone_b_title">📍 Zon B (Kundasang Corridor):</strong>
+                                    <span class="text-amber-800" data-i18n="zone_b_sub">Indeks Sisa Racun Sederhana</span>
+                                </div>
+                                <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                                    <strong class="text-rose-900 block font-bold" data-i18n="zone_c_title">📍 Zon C (Tenom Corridor):</strong>
+                                    <span class="text-rose-800" data-i18n="zone_c_sub">Memerlukan Pemantauan MRL Kerap</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ==================== VIEW 6: USAGE GUIDELINES ==================== -->
+                <div id="view-guide" class="view-panel hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-card p-6 rounded-3xl space-y-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center text-xl font-bold">
+                                    <i class="fa-solid fa-book-bookmark"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-black text-slate-900 text-base" data-i18n="guide_title">Panduan Penggunaan Platform</h3>
+                                    <p class="text-xs text-slate-500" data-i18n="guide_sub">Cara membaca status keselamatan makanan</p>
+                                </div>
+                            </div>
+                            <div class="space-y-3 text-xs font-medium text-slate-700">
+                                <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                                    <strong class="text-emerald-950 font-bold block mb-0.5" data-i18n="guide_green_head">🟢 Lampu Hijau (≤40%):</strong>
+                                    <span data-i18n="guide_green_desc">Hasil tani berada dalam had keselamatan yang memuaskan.</span>
+                                </div>
+                                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                                    <strong class="text-amber-950 font-bold block mb-0.5" data-i18n="guide_yellow_head">🟡 Lampu Kuning (41% - 49%):</strong>
+                                    <span data-i18n="guide_yellow_desc">Risiko sisa racun sederhana. Disyorkan basuhan lebih teliti sebelum dimasak.</span>
+                                </div>
+                                <div class="p-3 bg-rose-50 rounded-xl border border-rose-200">
+                                    <strong class="text-rose-950 font-bold block mb-0.5" data-i18n="guide_red_head">🔴 Lampu Merah (≥50%):</strong>
+                                    <span data-i18n="guide_red_desc">Kadar ketoksikan melebihi had MRL. Perlu tindakan pembersihan atau penguatkuasaan.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-6 rounded-3xl space-y-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-2xl flex items-center justify-center text-xl font-bold">
+                                    <i class="fa-solid fa-flask-vial"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-black text-slate-900 text-base" data-i18n="method_title">Kaedah Ujian Makmal</h3>
+                                    <p class="text-xs text-slate-500" data-i18n="method_sub">Perencatan Enzim Cholinesterase (AChE)</p>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-600 leading-relaxed font-medium" data-i18n="method_desc">
+                                Ujian mengukur tindak balas perencatan enzim terhadap sebatian racun serangga. Peratusan kadar perencatan yang lebih rendah menunjukkan sampel hasil tani adalah lebih selamat.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+
+            <!-- FOOTER -->
+            <footer class="bg-slate-950 text-slate-400 text-xs py-4 border-t border-slate-800 shrink-0 relative z-10">
+                <div class="max-w-7xl mx-auto px-6 text-center space-y-1">
+                    <p class="text-slate-200 font-bold text-xs" data-i18n="footer_title">Platform Pemantauan Keselamatan Makanan</p>
+                    <p class="text-[10px] text-slate-500">© 2026 Universiti Malaysia Sabah (UMS) & Lembaga Pertubuhan Peladang (LPP) Wilayah Persekutuan Labuan</p>
+                </div>
+            </footer>
+        </div>
+
+    </div>
+
+    <!-- NON-OVERLAPPING RETRACTABLE FLOATING CORNER BUTTON -->
+    <div id="floatingDockWrapper" class="fixed bottom-6 right-6 z-40 flex flex-col items-end space-y-2">
+        <!-- Floating Navigation Drawer (Slides Up) -->
+        <div id="floatingDockContent" class="hidden floating-nav-dock p-2 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-col space-y-1.5 transition-all">
+            <button onclick="switchTab('dashboard'); scrollToTop();" title="Pusat Kawalan" class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 transition">
+                <i class="fa-solid fa-chart-line text-emerald-400"></i>
+                <span data-i18n="nav_cmd">Pusat Kawalan</span>
+            </button>
+            <button onclick="switchTab('pesticide'); scrollToTop();" title="Ujian PRM-1D" class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 transition">
+                <i class="fa-solid fa-vial-circle-check text-teal-400"></i>
+                <span data-i18n="nav_prm">Ujian PRM</span>
+            </button>
+            <button onclick="switchTab('logistics'); scrollToTop();" title="Logistik Lori" class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 transition">
+                <i class="fa-solid fa-truck text-gold-400"></i>
+                <span data-i18n="nav_logistics">Logistik</span>
+            </button>
+            <button onclick="switchTab('genius-ai'); scrollToTop();" title="Genius AI" class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 transition">
+                <i class="fa-solid fa-brain text-cyan-400"></i>
+                <span data-i18n="nav_ai_gis">Genius AI</span>
+            </button>
+            <button onclick="scrollToTop()" title="Kembali ke Atas" class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-2 transition border-t border-slate-700 pt-1.5">
+                <i class="fa-solid fa-arrow-up text-emerald-400"></i>
+                <span>Ke Atas</span>
+            </button>
+        </div>
+
+        <!-- Clean Circular Arrow Toggle (Zero Footer Overlap) -->
+        <button onclick="toggleFloatingDock()" id="btnDockToggle" class="w-11 h-11 rounded-2xl bg-slate-900 text-emerald-400 hover:text-white hover:bg-emerald-800 border border-slate-700 shadow-2xl flex items-center justify-center text-sm font-black transition-all transform hover:scale-105 cursor-pointer">
+            <i id="dockToggleIcon" class="fa-solid fa-chevron-up"></i>
+        </button>
+    </div>
+
+    <!-- SINGLE INTEGRATED APP JS -->
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
